@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>글 백업 사이트</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+<style>
+:root{
+    --main:#667eea;
+    --sub:#764ba2;
+    --bg:#ffffff;
+    --text:#111111;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+html{
+    overflow-y:scroll;
+}
+
+body{
+    font-family:'Pretendard',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    background-size:cover;
+    background-position:center;
+    background-attachment:fixed;
+}
+
+/* 시작 화면 */
+.start-screen{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.75);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index:9999;
+}
+
+.start-box{
+    width:320px;
+    background:#fff;
+    color:#111;
+    padding:40px;
+    border-radius:20px;
+    text-align:center;
+}
+
+.start-box h1{
+    font-size:24px;
+    margin-bottom:25px;
+}
+
+.start-buttons{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+}
+
+/* 음악 바 */
+.music-bar{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    height:60px;
+    background:rgba(0,0,0,0); /* 완전 투명 */
+    backdrop-filter:none;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:0 15px;
+    z-index:1000;
+}
+
+.music-btn,
+.music-upload{
+    border:none;
+    background:none;
+    color:var(--text);
+    font-size:28px;
+    cursor:pointer;
+}
+
+.music-info{
+    flex:1;
+}
+
+.music-title{
+    color:var(--text);
+    font-size:14px;
+    margin-bottom:6px;
+}
+
+.progress{
+    width:100%;
+    height:4px;
+    background:#cccccc55;
+    border-radius:10px;
+    overflow:hidden;
+}
+
+.fill{
+    width:0%;
+    height:100%;
+    background:linear-gradient(90deg,var(--main),var(--sub));
+}
+
+.volume{
+    width:120px;
+}
+
+/* 본문 */
+.container{
+    max-width:760px;
+    margin:auto;
+    padding:110px 40px 120px;
+}
+
+.panel{
+    background:transparent;
+    padding:0;
+    margin-bottom:25px;
+}
+
+.title{
+    font-size:18px;
+    font-weight:700;
+    margin-bottom:15px;
+}
+
+.row{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+}
+
+textarea{
+    width:100%;
+    border:none;
+    outline:none;
+    background:transparent;
+    color:var(--text);
+    font-family:'Pretendard';
+}
+
+/* 제목 삭제했으므로 본문만 */
+#postContent{
+    min-height:500px;
+    resize:none;
+    overflow:hidden;
+    font-size:17px;
+    line-height:2.05;
+    letter-spacing:-0.01em;
+    font-weight:400;
+    text-align:justify;          /* 양끝 정렬 */
+    text-justify:inter-word;
+}
+
+button{
+    border:none;
+    padding:12px 18px;
+    border-radius:10px;
+    cursor:pointer;
+    font-family:'Pretendard';
+}
+
+.primary{
+    background:linear-gradient(135deg,var(--main),var(--sub));
+    color:#fff;
+}
+
+.sub{
+    background:#00000010;
+    color:var(--text);
+}
+
+.card{
+    background:#00000008;
+    padding:18px;
+    border-radius:14px;
+    margin-bottom:14px;
+}
+
+.bottom-bar{
+    position:fixed;
+    bottom:15px;
+    left:50%;
+    transform:translateX(-50%);
+    display:flex;
+    gap:10px;
+}
+
+/* 방문자 */
+.viewer .editor-only{
+    display:none !important;
+}
+
+.viewer #postContent{
+    pointer-events:none;
+}
+
+/* 모바일 */
+@media(max-width:700px){
+    .container{
+        max-width:100%;
+        padding:95px 22px 120px;
+    }
+
+    #postContent{
+        font-size:16px;
+        line-height:1.95;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- 시작 -->
+<div class="start-screen" id="startScreen">
+    <div class="start-box">
+        <h1>모드를 선택하세요</h1>
+        <div class="start-buttons">
+            <button class="primary" onclick="enterMode('editor')">편집자</button>
+            <button class="sub" onclick="enterMode('viewer')">방문자</button>
+        </div>
+    </div>
+</div>
+
+<!-- 음악 바 -->
+<div class="music-bar">
+
+    <label class="music-upload editor-only">
+        📁
+        <input hidden type="file" id="musicFile" accept="audio/*">
+    </label>
+
+    <button class="music-btn" id="playBtn">▶</button>
+
+    <div class="music-info">
+        <div class="music-title" id="musicTitle">음악 없음</div>
+        <div class="progress">
+            <div class="fill" id="fill"></div>
+        </div>
+    </div>
+
+    <input type="range" class="volume" id="volumeBar" min="0" max="1" step="0.01" value="1">
+
+</div>
+
+<audio id="audio" loop></audio>
+
+<div class="container">
+
+    <!-- 편집 설정 -->
+    <div class="panel editor-only">
+        <div class="title">편집 설정</div>
+
+        <div class="row">
+            <label>배경 이미지</label>
+            <input type="file" id="bgFile" accept="image/*,.gif">
+        </div>
+
+        <div class="row">
+            <label>배경 색상</label>
+            <input type="color" id="bgColor" value="#ffffff">
+        </div>
+
+        <div class="row">
+            <label>글자 색상</label>
+            <input type="color" id="textColor" value="#111111">
+        </div>
+
+        <div class="row">
+            <label>메인 색상</label>
+            <input type="color" id="mainColor" value="#667eea">
+        </div>
+
+        <div class="row">
+            <label>보조 색상</label>
+            <input type="color" id="subColor" value="#764ba2">
+        </div>
+    </div>
+
+    <!-- 글쓰기 -->
+    <div class="panel">
+        <textarea id="postContent" placeholder="본문을 입력하세요"></textarea>
+
+        <div class="row editor-only" style="margin-top:25px;">
+            <button class="primary" onclick="savePost()">저장하기</button>
+            <button class="sub" onclick="newPost()">새 글</button>
+            <button class="sub" onclick="exportPost()">내보내기</button>
+        </div>
+    </div>
+
+    <!-- 저장 목록 -->
+    <div class="panel editor-only">
+        <div class="title">저장된 글</div>
+        <div id="list"></div>
+    </div>
+
+</div>
+
+<!-- 하단 -->
+<div class="bottom-bar">
+    <button class="sub" onclick="enterMode('editor')">편집자</button>
+    <button class="sub" onclick="enterMode('viewer')">방문자</button>
+</div>
+
+<script>
+function enterMode(mode){
+    startScreen.style.display="none";
+
+    if(mode==="viewer"){
+        document.body.classList.add("viewer");
+    }else{
+        document.body.classList.remove("viewer");
+    }
+}
+
+/* 자동 높이 */
+function autoResize(){
+    postContent.style.height="auto";
+    postContent.style.height=postContent.scrollHeight+"px";
+}
+postContent.addEventListener("input",autoResize);
+
+/* 색상 */
+mainColor.oninput=e=>{
+document.documentElement.style.setProperty("--main",e.target.value);
+}
+subColor.oninput=e=>{
+document.documentElement.style.setProperty("--sub",e.target.value);
+}
+bgColor.oninput=e=>{
+document.documentElement.style.setProperty("--bg",e.target.value);
+}
+textColor.oninput=e=>{
+document.documentElement.style.setProperty("--text",e.target.value);
+}
+
+/* 배경 이미지 */
+bgFile.onchange=e=>{
+const file=e.target.files[0];
+if(!file)return;
+document.body.style.backgroundImage=`url(${URL.createObjectURL(file)})`;
+}
+
+/* 음악 */
+const audio=document.getElementById("audio");
+
+musicFile.onchange=e=>{
+const file=e.target.files[0];
+if(!file)return;
+
+audio.src=URL.createObjectURL(file);
+musicTitle.textContent=file.name;
+
+audio.play().catch(()=>{});
+playBtn.textContent="⏸";
+}
+
+playBtn.onclick=()=>{
+if(!audio.src)return;
+
+if(audio.paused){
+audio.play();
+playBtn.textContent="⏸";
+}else{
+audio.pause();
+playBtn.textContent="▶";
+}
+}
+
+audio.ontimeupdate=()=>{
+if(audio.duration){
+fill.style.width=(audio.currentTime/audio.duration)*100+"%";
+}
+}
+
+volumeBar.oninput=e=>{
+audio.volume=e.target.value;
+}
+
+/* 저장 */
+let posts=[];
+let editId=null;
+
+function savePost(){
+const post={
+id:editId||Date.now(),
+content:postContent.value
+};
+
+if(editId){
+posts=posts.map(p=>p.id===editId?post:p);
+}else{
+posts.unshift(post);
+}
+
+render();
+newPost();
+}
+
+function newPost(){
+editId=null;
+postContent.value="";
+autoResize();
+}
+
+function loadPost(id){
+const p=posts.find(x=>x.id===id);
+if(!p)return;
+
+editId=id;
+postContent.value=p.content;
+autoResize();
+}
+
+function removePost(id){
+posts=posts.filter(p=>p.id!==id);
+render();
+}
+
+function exportPost(){
+const text=postContent.value;
+
+const blob=new Blob([text],{type:"text/plain"});
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="post.txt";
+a.click();
+}
+
+function render(){
+list.innerHTML=posts.map(p=>`
+<div class="card">
+<button class="sub" onclick="loadPost(${p.id})">불러오기</button>
+<button class="sub" onclick="removePost(${p.id})">삭제</button>
+</div>
+`).join("");
+}
+</script>
+
+</body>
+</html>
